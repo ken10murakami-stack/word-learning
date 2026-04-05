@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>英単語学習アプリ モックアップ</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div id="setup-screen">
+            <h1>英単語学習</h1>
+            <div class="setup-group">
+                <label>レベル選択:</label>
+                <select id="level-select">
+                    <option value="1">レベル 1</option>
+                    <option value="2">レベル 2</option>
+                    <option value="3">レベル 3</option>
+                </select>
+            </div>
+            <div class="status-view" id="status-view">
+                </div>
+            <div class="mode-selection">
+                <button onclick="app.start('en-jp')">英 → 日</button>
+                <button onclick="app.start('jp-en')">日 → 英</button>
+            </div>
+        </div>
+
+        <div id="quiz-screen" class="hidden">
+            <div class="quiz-header">
+                <span id="progress-text">0 / 0</span>
+                <button class="btn-small" onclick="location.reload()">終了</button>
+            </div>
+            
+            <div class="card" id="quiz-card">
+                <div class="question-zone">
+                    <div id="pos-tag" class="tag">品詞</div>
+                    <h2 id="question-text">Question</h2>
+                </div>
+                
+                <div id="answer-zone" class="hidden">
+                    <hr>
+                    <h1 id="answer-text">Answer</h1>
+                    <p id="reading-text">よみがな</p>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button id="show-btn" class="primary" onclick="app.showAnswer()">答えを見る</button>
+                <div id="judge-btns" class="hidden">
+                    <button class="btn-wrong" onclick="app.next(false)">間違えた</button>
+                    <button class="btn-correct" onclick="app.next(true)">正解！</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
