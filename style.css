@@ -1,0 +1,74 @@
+:root {
+    --primary: #4a90e2;
+    --success: #4caf50;
+    --danger: #f44336;
+    --bg: #f5f7f9;
+}
+
+body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    background-color: var(--bg);
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.container {
+    background: white;
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+}
+
+.hidden { display: none; }
+
+/* カードデザイン */
+.card {
+    margin: 20px 0;
+    padding: 30px 15px;
+    border: 2px solid #eee;
+    border-radius: 12px;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.tag {
+    display: inline-block;
+    background: #eee;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    margin-bottom: 10px;
+}
+
+/* ボタン */
+button {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.2s;
+    margin: 5px;
+}
+
+button.primary { background: var(--primary); color: white; width: 100%; }
+.btn-correct { background: var(--success); color: white; flex: 1; }
+.btn-wrong { background: var(--danger); color: white; flex: 1; }
+
+.judge-btns { display: flex; gap: 10px; }
+
+.status-view {
+    font-size: 0.9rem;
+    color: #666;
+    margin: 15px 0;
+    padding: 10px;
+    background: #f9f9f9;
+}
