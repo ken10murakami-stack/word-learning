@@ -3,11 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>中学英単語学習アプリ</title>
+    <title>中学英単語学習 Pro</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="loading-overlay">データを読み込み中...</div>
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <p>スプレッドシートからデータを取得中...</p>
+    </div>
 
     <div class="container">
         <div id="setup-screen">
@@ -21,7 +24,7 @@
                 <div class="control-group">
                     <label>品詞:</label>
                     <select id="pos-select">
-                        <option value="all">すべて</option>
+                        <option value="all">すべての品詞</option>
                     </select>
                 </div>
             </div>
@@ -31,25 +34,29 @@
                 <button class="btn-main" onclick="app.start('jp-en')">日 → 英</button>
             </div>
 
-            <hr>
-            <h3>達成状況 (%)</h3>
-            <div id="stats-container" class="stats-grid"></div>
+            <div class="stats-section">
+                <h3>達成状況 (%)</h3>
+                <div id="stats-container" class="stats-grid"></div>
+            </div>
             
             <div class="data-controls">
-                <button class="btn-outline" onclick="app.exportJSON()">JSON保存</button>
-                <button class="btn-outline" onclick="document.getElementById('import-file').click()">JSON読込</button>
+                <button class="btn-outline" onclick="app.exportJSON()">JSONでバックアップ</button>
+                <button class="btn-outline" onclick="document.getElementById('import-file').click()">JSONから復元</button>
                 <input type="file" id="import-file" class="hidden" onchange="app.importJSON(event)">
             </div>
         </div>
 
         <div id="quiz-screen" class="hidden">
             <div class="quiz-header">
-                <button class="btn-back" onclick="app.goHome()">◀ ホーム</button>
+                <button class="btn-back" onclick="app.goHome()">◀ ホームへ</button>
                 <span id="progress-text">0 / 0</span>
             </div>
             
-            <div class="card">
-                <div id="pos-tag" class="tag">品詞</div>
+            <div class="card" id="quiz-card">
+                <div class="tag-container">
+                    <span id="pos-tag" class="tag">品詞</span>
+                    <span id="level-tag" class="tag level-tag">Lv</span>
+                </div>
                 <h2 id="question-text">Question</h2>
                 
                 <div id="answer-zone" class="hidden">
