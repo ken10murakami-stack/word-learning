@@ -1,4 +1,4 @@
-const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyq01uVhRU8iIZuVm4Y9k40igFrPe0nX_20oOF6VZunUXUJCozrFCqL6_iNWjwyPAnr/exec";
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyP6DOvquiEmALt7coEB9ATGUaIdCIU6UayptZ3iyGsTw2UYfAAaw9H9n4RbGqk2wU/exec";
 
 const app = {
     masterWords: [],
