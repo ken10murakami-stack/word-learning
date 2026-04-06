@@ -8,21 +8,18 @@ const app = {
     mode: 'en-jp',
 
     async init() {
-        const loadingText = document.querySelector('#loading-overlay p');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loadingText = loadingOverlay.querySelector('p');
         try {
             console.log("Fetching started...");
             const response = await fetch(GAS_API_URL);
-            if (!response.ok) throw new Error("HTTP Error");
-            
             const rawData = await response.json();
             
-            // データの項目名（キー）を標準化する
             this.masterWords = rawData.map(item => {
                 const newItem = {};
                 for (let key in item) {
                     const cleanKey = key.trim();
                     const val = item[key];
-                    // 表記ゆれ吸収マップ
                     if (cleanKey === "ID") newItem.id = val;
                     if (cleanKey === "英語" || cleanKey === "English") newItem.en = val;
                     if (cleanKey === "意味" || cleanKey === "日本語" || cleanKey === "Meaning") newItem.jp = val;
@@ -31,24 +28,27 @@ const app = {
                     if (cleanKey === "レベル") newItem.lv = val;
                 }
                 return newItem;
-            }).filter(item => item.en); // 英語が入っていない行は除外
+            }).filter(item => item.en);
 
-            console.log("Standardized Data:", this.masterWords[0]);
+            console.log("Standardized Data Ready:", this.masterWords[0]);
 
             const saved = localStorage.getItem('word_app_progress_v1');
             this.userProgress = saved ? JSON.parse(saved) : {};
 
             this.setupUI();
             this.updateStats();
-            document.getElementById('loading-overlay').classList.add('hidden');
+
+            // 画面を表示させる
+            loadingOverlay.classList.add('hidden');
+            console.log("App Ready and Overlay Hidden");
         } catch (e) {
             console.error("Critical Error:", e);
-            loadingText.innerHTML = `エラー: ${e.message}`;
+            loadingText.innerHTML = `読み込みエラー: ${e.message}`;
         }
     },
 
     setupUI() {
-        const levels = [...new Set(this.masterWords.map(w => w.lv))].sort((a,b) => a-b);
+        const levels = [...new Set(this.masterWords.map(w => w.lv))].filter(l => l).sort((a,b) => a-b);
         const poses = [...new Set(this.masterWords.map(w => w.pos))].filter(p => p);
         
         const lSelect = document.getElementById('level-select');
@@ -62,8 +62,10 @@ const app = {
 
     updateStats() {
         const container = document.getElementById('stats-container');
+        if (!container) return; // 要素がない場合はスキップ
         container.innerHTML = "";
-        const levels = [...new Set(this.masterWords.map(w => w.lv))].sort((a,b) => a-b);
+        
+        const levels = [...new Set(this.masterWords.map(w => w.lv))].filter(l => l).sort((a,b) => a-b);
         const targetPoses = ["名詞", "動詞", "形容詞", "副詞"];
 
         levels.forEach(l => {
@@ -84,8 +86,10 @@ const app = {
         const lv = document.getElementById('level-select').value;
         const pos = document.getElementById('pos-select').value;
         this.mode = selectedMode;
+        
         let filtered = this.masterWords.filter(w => w.lv == lv);
         if (pos !== "all") filtered = filtered.filter(w => w.pos === pos);
+        
         if (filtered.length === 0) return alert("条件に合う単語がありません。");
 
         this.currentQueue = filtered.sort((a, b) => {
@@ -96,6 +100,7 @@ const app = {
         });
 
         this.currentIndex = 0;
+        document.getElementById('setup-screen').classList.remove('hidden'); // 念のため
         document.getElementById('setup-screen').classList.add('hidden');
         document.getElementById('quiz-screen').classList.remove('hidden');
         this.renderQuiz();
@@ -128,7 +133,7 @@ const app = {
         if (this.currentIndex < this.currentQueue.length) {
             this.renderQuiz();
         } else {
-            alert("終了しました！");
+            alert("学習終了！");
             this.goHome();
         }
     },
@@ -137,28 +142,6 @@ const app = {
         this.updateStats();
         document.getElementById('setup-screen').classList.remove('hidden');
         document.getElementById('quiz-screen').classList.add('hidden');
-    },
-
-    exportJSON() {
-        const dataStr = JSON.stringify(this.userProgress, null, 2);
-        const blob = new Blob([dataStr], {type: 'application/json'});
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'study_data.json';
-        a.click();
-    },
-
-    importJSON(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            this.userProgress = JSON.parse(e.target.result);
-            localStorage.setItem('word_app_progress_v1', JSON.stringify(this.userProgress));
-            this.updateStats();
-            alert("復元しました");
-        };
-        reader.readAsText(file);
     }
 };
 
