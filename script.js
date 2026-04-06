@@ -1,4 +1,4 @@
-const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyP6DOvquiEmALt7coEB9ATGUaIdCIU6UayptZ3iyGsTw2UYfAAaw9H9n4RbGqk2wU/exec";
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyq01uVhRU8iIZuVm4Y9k40igFrPe0nX_20oOF6VZunUXUJCozrFCqL6_iNWjwyPAnr/exec";
 
 const app = {
     masterWords: [],
@@ -10,19 +10,30 @@ const app = {
     async init() {
         const loadingText = document.querySelector('#loading-overlay p');
         try {
-            console.log("Fetching started..."); // デバッグ用
-            loadingText.innerText = "GASに接続中...";
-
-            // fetchの第2オプションを追加して確実に取得
-            const response = await fetch(GAS_API_URL, {
-                method: "GET",
-                mode: "cors"
-            });
-
-            if (!response.ok) throw new Error("サーバーからの応答が正常ではありません。");
+            console.log("Fetching started...");
+            const response = await fetch(GAS_API_URL);
+            if (!response.ok) throw new Error("HTTP Error");
             
-            this.masterWords = await response.json();
-            console.log("Data loaded:", this.masterWords.length, "words");
+            const rawData = await response.json();
+            
+            // データの項目名（キー）を標準化する
+            this.masterWords = rawData.map(item => {
+                const newItem = {};
+                for (let key in item) {
+                    const cleanKey = key.trim();
+                    const val = item[key];
+                    // 表記ゆれ吸収マップ
+                    if (cleanKey === "ID") newItem.id = val;
+                    if (cleanKey === "英語" || cleanKey === "English") newItem.en = val;
+                    if (cleanKey === "意味" || cleanKey === "日本語" || cleanKey === "Meaning") newItem.jp = val;
+                    if (cleanKey === "読み方" || cleanKey === "読み") newItem.read = val;
+                    if (cleanKey === "品詞") newItem.pos = val;
+                    if (cleanKey === "レベル") newItem.lv = val;
+                }
+                return newItem;
+            }).filter(item => item.en); // 英語が入っていない行は除外
+
+            console.log("Standardized Data:", this.masterWords[0]);
 
             const saved = localStorage.getItem('word_app_progress_v1');
             this.userProgress = saved ? JSON.parse(saved) : {};
@@ -32,34 +43,34 @@ const app = {
             document.getElementById('loading-overlay').classList.add('hidden');
         } catch (e) {
             console.error("Critical Error:", e);
-            loadingText.innerHTML = `エラーが発生しました:<br><span style="color:red; font-size:0.8rem;">${e.message}</span><br><br>GASのURLをブラウザで直接開き、承認（Allow）を完了させてから再読み込みしてください。`;
+            loadingText.innerHTML = `エラー: ${e.message}`;
         }
     },
 
     setupUI() {
-        const levels = [...new Set(this.masterWords.map(w => w['レベル']))].sort((a,b) => a-b);
-        const poses = [...new Set(this.masterWords.map(w => w['品詞']))].filter(p => p);
+        const levels = [...new Set(this.masterWords.map(w => w.lv))].sort((a,b) => a-b);
+        const poses = [...new Set(this.masterWords.map(w => w.pos))].filter(p => p);
         
         const lSelect = document.getElementById('level-select');
-        lSelect.innerHTML = ""; // 初期化
+        lSelect.innerHTML = "";
         levels.forEach(l => lSelect.add(new Option(`レベル ${l}`, l)));
 
         const pSelect = document.getElementById('pos-select');
-        pSelect.innerHTML = '<option value="all">すべての品詞</option>'; // 初期化
+        pSelect.innerHTML = '<option value="all">すべての品詞</option>';
         poses.forEach(p => pSelect.add(new Option(p, p)));
     },
 
     updateStats() {
         const container = document.getElementById('stats-container');
         container.innerHTML = "";
-        const levels = [...new Set(this.masterWords.map(w => w['レベル']))].sort((a,b) => a-b);
+        const levels = [...new Set(this.masterWords.map(w => w.lv))].sort((a,b) => a-b);
         const targetPoses = ["名詞", "動詞", "形容詞", "副詞"];
 
         levels.forEach(l => {
             targetPoses.forEach(p => {
-                const words = this.masterWords.filter(w => w['レベル'] == l && w['品詞'] == p);
+                const words = this.masterWords.filter(w => w.lv == l && w.pos == p);
                 if (words.length === 0) return;
-                const correctCount = words.filter(w => this.userProgress[w['ID']] === 1).length;
+                const correctCount = words.filter(w => this.userProgress[w.id] === 1).length;
                 const percent = Math.round((correctCount / words.length) * 100);
                 const div = document.createElement('div');
                 div.className = "stat-item";
@@ -73,13 +84,13 @@ const app = {
         const lv = document.getElementById('level-select').value;
         const pos = document.getElementById('pos-select').value;
         this.mode = selectedMode;
-        let filtered = this.masterWords.filter(w => w['レベル'] == lv);
-        if (pos !== "all") filtered = filtered.filter(w => w['品詞'] === pos);
+        let filtered = this.masterWords.filter(w => w.lv == lv);
+        if (pos !== "all") filtered = filtered.filter(w => w.pos === pos);
         if (filtered.length === 0) return alert("条件に合う単語がありません。");
 
         this.currentQueue = filtered.sort((a, b) => {
-            const sA = this.userProgress[a['ID']] || 0;
-            const sB = this.userProgress[b['ID']] || 0;
+            const sA = this.userProgress[a.id] || 0;
+            const sB = this.userProgress[b.id] || 0;
             if (sA !== sB) return sA - sB;
             return Math.random() - 0.5;
         });
@@ -93,11 +104,11 @@ const app = {
     renderQuiz() {
         const word = this.currentQueue[this.currentIndex];
         document.getElementById('progress-text').innerText = `${this.currentIndex + 1} / ${this.currentQueue.length}`;
-        document.getElementById('pos-tag').innerText = word['品詞'] || '不明';
-        document.getElementById('level-tag').innerText = `Lv.${word['レベル']}`;
-        document.getElementById('question-text').innerText = (this.mode === 'en-jp') ? word['英語'] : word['意味'];
-        document.getElementById('answer-text').innerText = (this.mode === 'en-jp') ? word['意味'] : word['英語'];
-        document.getElementById('reading-text').innerText = word['読み方'] || '';
+        document.getElementById('pos-tag').innerText = word.pos || '不明';
+        document.getElementById('level-tag').innerText = `Lv.${word.lv}`;
+        document.getElementById('question-text').innerText = (this.mode === 'en-jp') ? word.en : word.jp;
+        document.getElementById('answer-text').innerText = (this.mode === 'en-jp') ? word.jp : word.en;
+        document.getElementById('reading-text').innerText = word.read || '';
         document.getElementById('answer-zone').classList.add('hidden');
         document.getElementById('judge-btns').classList.add('hidden');
         document.getElementById('show-btn').classList.remove('hidden');
@@ -111,7 +122,7 @@ const app = {
 
     next(isCorrect) {
         const word = this.currentQueue[this.currentIndex];
-        this.userProgress[word['ID']] = isCorrect ? 1 : -1;
+        this.userProgress[word.id] = isCorrect ? 1 : -1;
         localStorage.setItem('word_app_progress_v1', JSON.stringify(this.userProgress));
         this.currentIndex++;
         if (this.currentIndex < this.currentQueue.length) {
