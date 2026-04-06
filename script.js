@@ -1,20 +1,29 @@
-const GAS_API_URL = "https://script.google.com/macros/s/AKfycbymTRufxPxcK67indq6nXwQeFT-HWetmalDtOQFKpy7E3dEp14_NZtuTQ6uFoFP1YpY/exec";
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyq01uVhRU8iIZuVm4Y9k40igFrPe0nX_20oOF6VZunUXUJCozrFCqL6_iNWjwyPAnr/exec";
 
 const app = {
     masterWords: [],
-    userProgress: {}, // { ID: status(-1:誤, 1:正) }
+    userProgress: {},
     currentQueue: [],
     currentIndex: 0,
     mode: 'en-jp',
 
     async init() {
+        const loadingText = document.querySelector('#loading-overlay p');
         try {
-            // 1. スプレッドシートからデータ取得
-            const response = await fetch(GAS_API_URL);
-            if (!response.ok) throw new Error("Network response was not ok");
-            this.masterWords = await response.json();
+            console.log("Fetching started..."); // デバッグ用
+            loadingText.innerText = "GASに接続中...";
+
+            // fetchの第2オプションを追加して確実に取得
+            const response = await fetch(GAS_API_URL, {
+                method: "GET",
+                mode: "cors"
+            });
+
+            if (!response.ok) throw new Error("サーバーからの応答が正常ではありません。");
             
-            // 2. 学習進捗をブラウザから読み込み
+            this.masterWords = await response.json();
+            console.log("Data loaded:", this.masterWords.length, "words");
+
             const saved = localStorage.getItem('word_app_progress_v1');
             this.userProgress = saved ? JSON.parse(saved) : {};
 
@@ -22,8 +31,8 @@ const app = {
             this.updateStats();
             document.getElementById('loading-overlay').classList.add('hidden');
         } catch (e) {
-            document.querySelector('#loading-overlay p').innerText = "データの取得に失敗しました。GASの公開設定を確認してください。";
-            console.error(e);
+            console.error("Critical Error:", e);
+            loadingText.innerHTML = `エラーが発生しました:<br><span style="color:red; font-size:0.8rem;">${e.message}</span><br><br>GASのURLをブラウザで直接開き、承認（Allow）を完了させてから再読み込みしてください。`;
         }
     },
 
@@ -32,30 +41,28 @@ const app = {
         const poses = [...new Set(this.masterWords.map(w => w['品詞']))].filter(p => p);
         
         const lSelect = document.getElementById('level-select');
+        lSelect.innerHTML = ""; // 初期化
         levels.forEach(l => lSelect.add(new Option(`レベル ${l}`, l)));
 
         const pSelect = document.getElementById('pos-select');
+        pSelect.innerHTML = '<option value="all">すべての品詞</option>'; // 初期化
         poses.forEach(p => pSelect.add(new Option(p, p)));
     },
 
     updateStats() {
         const container = document.getElementById('stats-container');
         container.innerHTML = "";
-        
         const levels = [...new Set(this.masterWords.map(w => w['レベル']))].sort((a,b) => a-b);
-        const targetPoses = ["名詞", "動詞", "形容詞", "副詞"]; // 主要なもののみ表示
+        const targetPoses = ["名詞", "動詞", "形容詞", "副詞"];
 
         levels.forEach(l => {
             targetPoses.forEach(p => {
                 const words = this.masterWords.filter(w => w['レベル'] == l && w['品詞'] == p);
                 if (words.length === 0) return;
-
                 const correctCount = words.filter(w => this.userProgress[w['ID']] === 1).length;
                 const percent = Math.round((correctCount / words.length) * 100);
-
                 const div = document.createElement('div');
                 div.className = "stat-item";
-                if(percent === 100) div.style.borderLeftColor = "var(--success)";
                 div.innerHTML = `Lv${l} [${p}]<br><b>${percent}%</b> (${correctCount}/${words.length})`;
                 container.appendChild(div);
             });
@@ -66,24 +73,15 @@ const app = {
         const lv = document.getElementById('level-select').value;
         const pos = document.getElementById('pos-select').value;
         this.mode = selectedMode;
-
-        // フィルタリング
         let filtered = this.masterWords.filter(w => w['レベル'] == lv);
-        if (pos !== "all") {
-            filtered = filtered.filter(w => w['品詞'] === pos);
-        }
+        if (pos !== "all") filtered = filtered.filter(w => w['品詞'] === pos);
+        if (filtered.length === 0) return alert("条件に合う単語がありません。");
 
-        if (filtered.length === 0) return alert("選択した条件に合う単語がありません。");
-
-        // 出題順序の決定ロジック
-        // 1. 間違えた単語(status: -1)を最優先
-        // 2. 未実施(status: 0)を次に優先
-        // 3. 正解済み(status: 1)を最後に
         this.currentQueue = filtered.sort((a, b) => {
             const sA = this.userProgress[a['ID']] || 0;
             const sB = this.userProgress[b['ID']] || 0;
-            if (sA !== sB) return sA - sB; // -1 < 0 < 1
-            return Math.random() - 0.5;    // 同じ状態ならランダム
+            if (sA !== sB) return sA - sB;
+            return Math.random() - 0.5;
         });
 
         this.currentIndex = 0;
@@ -97,18 +95,9 @@ const app = {
         document.getElementById('progress-text').innerText = `${this.currentIndex + 1} / ${this.currentQueue.length}`;
         document.getElementById('pos-tag').innerText = word['品詞'] || '不明';
         document.getElementById('level-tag').innerText = `Lv.${word['レベル']}`;
-        
-        // モードによる出し分け
-        if (this.mode === 'en-jp') {
-            document.getElementById('question-text').innerText = word['英語'];
-            document.getElementById('answer-text').innerText = word['意味'];
-        } else {
-            document.getElementById('question-text').innerText = word['意味'];
-            document.getElementById('answer-text').innerText = word['英語'];
-        }
+        document.getElementById('question-text').innerText = (this.mode === 'en-jp') ? word['英語'] : word['意味'];
+        document.getElementById('answer-text').innerText = (this.mode === 'en-jp') ? word['意味'] : word['英語'];
         document.getElementById('reading-text').innerText = word['読み方'] || '';
-
-        // 表示の初期化
         document.getElementById('answer-zone').classList.add('hidden');
         document.getElementById('judge-btns').classList.add('hidden');
         document.getElementById('show-btn').classList.remove('hidden');
@@ -122,15 +111,13 @@ const app = {
 
     next(isCorrect) {
         const word = this.currentQueue[this.currentIndex];
-        // 進捗の保存
         this.userProgress[word['ID']] = isCorrect ? 1 : -1;
         localStorage.setItem('word_app_progress_v1', JSON.stringify(this.userProgress));
-
         this.currentIndex++;
         if (this.currentIndex < this.currentQueue.length) {
             this.renderQuiz();
         } else {
-            alert("本日の学習範囲をすべて終了しました！");
+            alert("終了しました！");
             this.goHome();
         }
     },
@@ -141,13 +128,12 @@ const app = {
         document.getElementById('quiz-screen').classList.add('hidden');
     },
 
-    // データのバックアップ機能
     exportJSON() {
         const dataStr = JSON.stringify(this.userProgress, null, 2);
         const blob = new Blob([dataStr], {type: 'application/json'});
-        const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url; a.download = 'english_study_backup.json';
+        a.href = URL.createObjectURL(blob);
+        a.download = 'study_data.json';
         a.click();
     },
 
@@ -156,19 +142,13 @@ const app = {
         if (!file) return;
         const reader = new FileReader();
         reader.onload = (e) => {
-            try {
-                const imported = JSON.parse(e.target.result);
-                this.userProgress = imported;
-                localStorage.setItem('word_app_progress_v1', JSON.stringify(this.userProgress));
-                this.updateStats();
-                alert("データを正常に復元しました。");
-            } catch (err) {
-                alert("ファイルの形式が正しくありません。");
-            }
+            this.userProgress = JSON.parse(e.target.result);
+            localStorage.setItem('word_app_progress_v1', JSON.stringify(this.userProgress));
+            this.updateStats();
+            alert("復元しました");
         };
         reader.readAsText(file);
     }
 };
 
-// アプリの開始
 window.onload = () => app.init();
