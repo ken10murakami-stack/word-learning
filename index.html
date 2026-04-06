@@ -9,12 +9,12 @@
 <body>
     <div id="loading-overlay">
         <div class="spinner"></div>
-        <p>スプレッドシートからデータを取得中...</p>
+        <p>データを読み込み中...</p>
     </div>
 
-<div class="stats-section">
-    <h3>達成状況 (%)</h3>
-    <div id="stats-container" class="stats-grid"></div> </div>
+    <div class="container">
+        <div id="setup-screen">
+            <h1>中学英単語学習</h1>
             
             <div class="filter-section">
                 <div class="control-group">
@@ -40,15 +40,15 @@
             </div>
             
             <div class="data-controls">
-                <button class="btn-outline" onclick="app.exportJSON()">JSONでバックアップ</button>
-                <button class="btn-outline" onclick="document.getElementById('import-file').click()">JSONから復元</button>
+                <button class="btn-outline" onclick="app.exportJSON()">JSON保存</button>
+                <button class="btn-outline" onclick="document.getElementById('import-file').click()">JSON読込</button>
                 <input type="file" id="import-file" class="hidden" onchange="app.importJSON(event)">
             </div>
         </div>
 
         <div id="quiz-screen" class="hidden">
             <div class="quiz-header">
-                <button class="btn-back" onclick="app.goHome()">◀ ホームへ</button>
+                <button class="btn-back" onclick="app.goHome()">◀ ホーム</button>
                 <span id="progress-text">0 / 0</span>
             </div>
             
