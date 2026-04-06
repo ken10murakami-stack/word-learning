@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>英単語学習アプリ Pro</title>
+    <title>中学英単語学習アプリ</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div id="loading-overlay">データを読み込み中...</div>
+
     <div class="container">
         <div id="setup-screen">
-            <h1>英単語学習</h1>
+            <h1>中学英単語学習</h1>
             
             <div class="filter-section">
                 <div class="control-group">
@@ -31,8 +33,7 @@
 
             <hr>
             <h3>達成状況 (%)</h3>
-            <div id="stats-container" class="stats-grid">
-                </div>
+            <div id="stats-container" class="stats-grid"></div>
             
             <div class="data-controls">
                 <button class="btn-outline" onclick="app.exportJSON()">JSON保存</button>
