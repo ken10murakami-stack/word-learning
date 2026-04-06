@@ -1,80 +1,18 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>中学英単語学習 Pro</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div id="loading-overlay">
-        <div class="spinner"></div>
-        <p>データを読み込み中...</p>
-    </div>
-
-    <div class="container">
-        <div id="setup-screen">
-            <h1>中学英単語学習</h1>
-            
-            <div class="filter-section">
-                <div class="control-group">
-                    <label>レベル:</label>
-                    <select id="level-select"></select>
-                </div>
-                <div class="control-group">
-                    <label>品詞:</label>
-                    <select id="pos-select">
-                        <option value="all">すべての品詞</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="mode-selection">
-                <button class="btn-main" onclick="app.start('en-jp')">英 → 日</button>
-                <button class="btn-main" onclick="app.start('jp-en')">日 → 英</button>
-            </div>
-
-            <div class="stats-section">
-                <h3>達成状況 (%)</h3>
-                <div id="stats-container" class="stats-grid"></div>
-            </div>
-            
-            <div class="data-controls">
-                <button class="btn-outline" onclick="app.exportJSON()">データの保存</button>
-                <button class="btn-outline" onclick="document.getElementById('import-file').click()">データの読込</button>
-                <input type="file" id="import-file" class="hidden" onchange="app.importJSON(event)">
-            </div>
+<div class="data-controls">
+    <button class="btn-outline" onclick="app.exportJSON()">データの保存</button>
+    <button class="btn-outline" onclick="document.getElementById('import-file').click()">データの読込</button>
+    <input type="file" id="import-file" class="hidden" onchange="app.importJSON(event)">
+    
+    <hr style="margin: 15px 0; border: 0; border-top: 1px solid #eee;">
+    
+    <div class="reset-section" style="font-size: 0.8rem; background: #fff5f5; padding: 10px; border-radius: 10px; border: 1px solid #fed7d7;">
+        <p style="margin-top:0; color: #c53030; font-weight: bold;">範囲指定リセット</p>
+        <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+            <select id="reset-level-select" style="font-size: 0.75rem; padding: 5px;"></select>
+            <select id="reset-pos-select" style="font-size: 0.75rem; padding: 5px;">
+                <option value="all">全品詞</option>
+            </select>
         </div>
-
-        <div id="quiz-screen" class="hidden">
-            <div class="quiz-header">
-                <button class="btn-back" onclick="app.goHome()">◀ ホーム</button>
-                <span id="progress-text">0 / 0</span>
-            </div>
-            
-            <div class="card" id="quiz-card">
-                <div class="tag-container">
-                    <span id="pos-tag" class="tag">品詞</span>
-                    <span id="level-tag" class="tag level-tag">Lv</span>
-                </div>
-                <h2 id="question-text">Question</h2>
-                
-                <div id="answer-zone" class="hidden">
-                    <hr>
-                    <h1 id="answer-text">Answer</h1>
-                    <p id="reading-text">よみがな</p>
-                </div>
-            </div>
-
-            <div class="controls">
-                <button id="show-btn" class="btn-primary" onclick="app.showAnswer()">答えを見る</button>
-                <div id="judge-btns" class="hidden">
-                    <button class="btn-wrong" onclick="app.next(false)">間違えた</button>
-                    <button class="btn-correct" onclick="app.next(true)">正解！</button>
-                </div>
-            </div>
-        </div>
+        <button class="btn-danger-outline" onclick="app.resetSpecificProgress()" style="width: 100%; padding: 8px; font-size: 0.75rem; background: white; border: 1px solid #fc8181; color: #c53030;">選択した範囲をリセット</button>
     </div>
-    <script src="script.js"></script>
-</body>
-</html>
+</div>
