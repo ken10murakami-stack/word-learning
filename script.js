@@ -1,31 +1,34 @@
-// 初期マスターデータ（スプレッドシートから読み込む想定のデータ）
-const MASTER_WORDS = [
-    { id: 1, en: "apple", read: "アップル", pos: "名詞", jp: "りんご", level: 1 },
-    { id: 2, en: "run", read: "ラン", pos: "動詞", jp: "走る", level: 1 },
-    { id: 3, en: "beautiful", read: "ビューティフル", pos: "形容詞", jp: "美しい", level: 1 },
-    { id: 4, en: "quickly", read: "クイックリー", pos: "副詞", jp: "素早く", level: 2 },
-    { id: 5, en: "book", read: "ブック", pos: "名詞", jp: "本", level: 1 },
-    { id: 6, en: "eat", read: "イート", pos: "動詞", jp: "食べる", level: 2 }
-];
+const GAS_API_URL = https://script.google.com/macros/s/AKfycbyq01uVhRU8iIZuVm4Y9k40igFrPe0nX_20oOF6VZunUXUJCozrFCqL6_iNWjwyPAnr/exec
 
 const app = {
-    userProgress: {}, // { id: status }
+    masterWords: [],
+    userProgress: {},
     currentQueue: [],
     currentIndex: 0,
     mode: 'en-jp',
 
-    init() {
-        // 保存データの読み込み
-        const saved = localStorage.getItem('word_app_progress');
-        this.userProgress = saved ? JSON.parse(saved) : {};
-        
-        this.renderFilters();
-        this.updateStats();
+    async init() {
+        try {
+            // GASからデータを取得
+            const response = await fetch(GAS_API_URL);
+            this.masterWords = await response.json();
+            
+            // ローカルストレージから進捗を読み込み
+            const saved = localStorage.getItem('word_app_progress');
+            this.userProgress = saved ? JSON.parse(saved) : {};
+
+            this.renderFilters();
+            this.updateStats();
+            document.getElementById('loading-overlay').classList.add('hidden');
+        } catch (e) {
+            alert("データの読み込みに失敗しました。URLを確認してください。");
+            console.error(e);
+        }
     },
 
     renderFilters() {
-        const levels = [...new Set(MASTER_WORDS.map(w => w.level))].sort();
-        const poses = [...new Set(MASTER_WORDS.map(w => w.pos))];
+        const levels = [...new Set(this.masterWords.map(w => w['レベル']))].sort();
+        const poses = [...new Set(this.masterWords.map(w => w['品詞']))];
         
         const lSelect = document.getElementById('level-select');
         levels.forEach(l => lSelect.add(new Option(`レベル ${l}`, l)));
@@ -37,21 +40,20 @@ const app = {
     updateStats() {
         const container = document.getElementById('stats-container');
         container.innerHTML = "";
-        
-        const levels = [...new Set(MASTER_WORDS.map(w => w.level))].sort();
-        const poses = [...new Set(MASTER_WORDS.map(w => w.pos))];
+        const levels = [...new Set(this.masterWords.map(w => w['レベル']))].sort();
+        const poses = ["名詞", "動詞", "形容詞", "副詞"];
 
         levels.forEach(l => {
             poses.forEach(p => {
-                const targetWords = MASTER_WORDS.filter(w => w.level == l && w.pos == p);
-                if (targetWords.length === 0) return;
+                const words = this.masterWords.filter(w => w['レベル'] == l && w['品詞'] == p);
+                if (words.length === 0) return;
 
-                const correctCount = targetWords.filter(w => this.userProgress[w.id] === 1).length;
-                const percent = Math.round((correctCount / targetWords.length) * 100);
+                const correct = words.filter(w => this.userProgress[w['ID']] === 1).length;
+                const percent = Math.round((correct / words.length) * 100);
 
                 const div = document.createElement('div');
                 div.className = "stat-item";
-                div.innerHTML = `Lv${l} [${p}]<br><b>${percent}%</b> (${correctCount}/${targetWords.length})`;
+                div.innerHTML = `Lv${l} [${p}]<br><b>${percent}%</b> (${correct}/${words.length})`;
                 container.appendChild(div);
             });
         });
@@ -62,17 +64,15 @@ const app = {
         const pos = document.getElementById('pos-select').value;
         this.mode = selectedMode;
 
-        // フィルタリング
-        let filtered = MASTER_WORDS.filter(w => w.level == lv);
-        if (pos !== "all") {
-            filtered = filtered.filter(w => w.pos === pos);
-        }
+        let filtered = this.masterWords.filter(w => w['レベル'] == lv);
+        if (pos !== "all") filtered = filtered.filter(w => w['品詞'] === pos);
 
-        // 優先順位：間違えた単語(-1) > 未実施(undefined/0) > 正解済(1)
+        // 優先順位：間違い(-1) > 未着手(0) > 正解(1)
         this.currentQueue = filtered.sort((a, b) => {
-            const statusA = this.userProgress[a.id] || 0;
-            const statusB = this.userProgress[b.id] || 0;
-            return statusA - statusB; 
+            const sA = this.userProgress[a['ID']] || 0;
+            const sB = this.userProgress[b['ID']] || 0;
+            if (sA !== sB) return sA - sB;
+            return Math.random() - 0.5; // 同じ優先度ならシャッフル
         });
 
         if (this.currentQueue.length === 0) return alert("該当する単語がありません");
@@ -86,10 +86,10 @@ const app = {
     renderQuiz() {
         const word = this.currentQueue[this.currentIndex];
         document.getElementById('progress-text').innerText = `${this.currentIndex + 1} / ${this.currentQueue.length}`;
-        document.getElementById('pos-tag').innerText = word.pos;
-        document.getElementById('question-text').innerText = (this.mode === 'en-jp') ? word.en : word.jp;
-        document.getElementById('answer-text').innerText = (this.mode === 'en-jp') ? word.jp : word.en;
-        document.getElementById('reading-text').innerText = word.read;
+        document.getElementById('pos-tag').innerText = word['品詞'];
+        document.getElementById('question-text').innerText = (this.mode === 'en-jp') ? word['英語'] : word['意味'];
+        document.getElementById('answer-text').innerText = (this.mode === 'en-jp') ? word['意味'] : word['英語'];
+        document.getElementById('reading-text').innerText = word['読み方'];
 
         document.getElementById('answer-zone').classList.add('hidden');
         document.getElementById('judge-btns').classList.add('hidden');
@@ -104,8 +104,8 @@ const app = {
 
     next(isCorrect) {
         const word = this.currentQueue[this.currentIndex];
-        this.userProgress[word.id] = isCorrect ? 1 : -1;
-        this.saveProgress();
+        this.userProgress[word['ID']] = isCorrect ? 1 : -1;
+        localStorage.setItem('word_app_progress', JSON.stringify(this.userProgress));
 
         this.currentIndex++;
         if (this.currentIndex < this.currentQueue.length) {
@@ -122,18 +122,12 @@ const app = {
         document.getElementById('quiz-screen').classList.add('hidden');
     },
 
-    saveProgress() {
-        localStorage.setItem('word_app_progress', JSON.stringify(this.userProgress));
-    },
-
     exportJSON() {
         const dataStr = JSON.stringify(this.userProgress, null, 2);
         const blob = new Blob([dataStr], {type: 'application/json'});
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
-        a.download = 'word_progress.json';
-        a.click();
+        a.href = url; a.download = 'study_data.json'; a.click();
     },
 
     importJSON(event) {
@@ -141,14 +135,10 @@ const app = {
         if (!file) return;
         const reader = new FileReader();
         reader.onload = (e) => {
-            try {
-                this.userProgress = JSON.parse(e.target.result);
-                this.saveProgress();
-                this.updateStats();
-                alert("読み込み完了しました");
-            } catch (err) {
-                alert("無効なJSONファイルです");
-            }
+            this.userProgress = JSON.parse(e.target.result);
+            localStorage.setItem('word_app_progress', JSON.stringify(this.userProgress));
+            this.updateStats();
+            alert("データを復元しました");
         };
         reader.readAsText(file);
     }
