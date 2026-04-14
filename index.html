@@ -54,11 +54,11 @@
         .btn-wrong { background: var(--danger); color: white; flex: 1; padding: 15px; }
         .btn-outline { background: #eee; color: #666; font-size: 0.75rem; padding: 8px 12px; margin: 2px; }
 
-        /* 統計表示 */
+        /* 統計表示（レベル別バー表示） */
         .stats-section { margin-top: 20px; text-align: left; }
         .stats-section h3 { font-size: 0.9rem; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
-        .stat-item { background: #f0f4f8; padding: 8px; border-radius: 8px; font-size: 0.75rem; border-left: 4px solid var(--primary); }
+        .stats-grid { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+        .stat-item { background: #f8fafc; padding: 12px; border-radius: 10px; border-left: 4px solid var(--primary); }
 
         /* データ操作・リセット */
         .data-controls { margin-top: 30px; border-top: 1px dashed #ccc; padding-top: 20px; }
@@ -164,7 +164,7 @@
     </div>
 
     <script>
-        // ★ここにあなたのGASのURLを入れてください
+        // ★GASのURL
         const GAS_API_URL = "https://script.google.com/macros/s/AKfycbx6-t--g61Li6_cGIta5JDbwfpejAV9FJTZ45WqFxIM0oHQMyYoUWE7XLtk7eP2WeU/exec";
 
         const app = {
@@ -233,19 +233,27 @@
                 const container = document.getElementById('stats-container');
                 container.innerHTML = "";
                 const levels = [...new Set(this.masterWords.map(w => w.lv))].filter(l => l).sort((a,b) => a-b);
-                const targetPoses = ["名詞", "動詞", "形容詞", "副詞"];
 
                 levels.forEach(l => {
-                    targetPoses.forEach(p => {
-                        const words = this.masterWords.filter(w => w.lv == l && w.pos == p);
-                        if (words.length === 0) return;
-                        const correctCount = words.filter(w => this.userProgress[w.id] === 1).length;
-                        const percent = Math.round((correctCount / words.length) * 100);
-                        const div = document.createElement('div');
-                        div.className = "stat-item";
-                        div.innerHTML = `Lv${l} [${p}]<br><b>${percent}%</b> (${correctCount}/${words.length})`;
-                        container.appendChild(div);
-                    });
+                    const levelWords = this.masterWords.filter(w => w.lv == l);
+                    if (levelWords.length === 0) return;
+
+                    const correctCount = levelWords.filter(w => this.userProgress[w.id] === 1).length;
+                    const percent = Math.round((correctCount / levelWords.length) * 100);
+
+                    const div = document.createElement('div');
+                    div.className = "stat-item";
+                    div.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <span style="font-weight: bold; font-size: 0.9rem;">レベル ${l} 全体</span>
+                            <span style="font-size: 0.75rem; color: #666;">${correctCount} / ${levelWords.length} 語</span>
+                        </div>
+                        <div style="background: #e2e8f0; height: 8px; border-radius: 4px;">
+                            <div style="background: var(--primary); width: ${percent}%; height: 100%; border-radius: 4px; transition: width 0.5s ease-out;"></div>
+                        </div>
+                        <div style="text-align: right; font-weight: bold; color: var(--primary); margin-top: 4px; font-size: 0.85rem;">${percent}%</div>
+                    `;
+                    container.appendChild(div);
                 });
             },
 
